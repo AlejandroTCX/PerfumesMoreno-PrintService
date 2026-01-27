@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PerfumesMoreno Print Service</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 450px;
+      margin: 0 auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .header .subtitle {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .logo {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      background: #e8f5e9;
+      border-radius: 8px;
+      margin-bottom: 25px;
+      color: #2e7d32;
+      font-weight: 500;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      background: #4caf50;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .status.error .status-dot {
+      background: #f44336;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #444;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: border-color 0.2s;
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .checkbox-group label {
+      margin: 0;
+      cursor: pointer;
+      font-weight: normal;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 25px;
+    }
+
+    button {
+      flex: 1;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .info-box {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .info-box code {
+      background: #e9ecef;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      color: #999;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🖨️</div>
+      <h1>Print Service</h1>
+      <div class="subtitle">PerfumesMoreno POS</div>
+    </div>
+
+    <div class="status" id="status">
+      <div class="status-dot"></div>
+      <span>Servidor activo en puerto <strong id="port-display">3003</strong></span>
+    </div>
+
+    <div class="form-group">
+      <label for="printer">Impresora predeterminada</label>
+      <select id="printer">
+        <option value="">Cargando impresoras...</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="port">Puerto del servidor</label>
+      <input type="number" id="port" value="3003" min="1024" max="65535">
+    </div>
+
+    <div class="checkbox-group">
+      <input type="checkbox" id="autoLaunch" checked>
+      <label for="autoLaunch">Iniciar automáticamente con Windows</label>
+    </div>
+
+    <div class="checkbox-group">
+      <input type="checkbox" id="minimizeToTray" checked>
+      <label for="minimizeToTray">Minimizar a la bandeja del sistema</label>
+    </div>
+
+    <div class="buttons">
+      <button class="btn-secondary" id="testBtn">🧪 Probar</button>
+      <button class="btn-primary" id="saveBtn">💾 Guardar</button>
+    </div>
+
+    <div class="info-box">
+      <strong>Endpoints disponibles:</strong><br>
+      <code>POST /print</code> - Imprimir HTML<br>
+      <code>GET /printers</code> - Listar impresoras<br>
+      <code>GET /health</code> - Estado del servidor
+    </div>
+
+    <div class="footer">
+      v1.0.0 - PerfumesMoreno © 2024
+    </div>
+  </div>
+
+  <script>
+    // Elementos del DOM
+    const printerSelect = document.getElementById('printer');
+    const portInput = document.getElementById('port');
+    const autoLaunchCheck = document.getElementById('autoLaunch');
+    const minimizeToTrayCheck = document.getElementById('minimizeToTray');
+    const saveBtn = document.getElementById('saveBtn');
+    const testBtn = document.getElementById('testBtn');
+    const statusDiv = document.getElementById('status');
+    const portDisplay = document.getElementById('port-display');
+
+    // Cargar configuración al iniciar
+    async function loadConfig() {
+      try {
+        const config = await window.electronAPI.getConfig();
+        portInput.value = config.port || 3003;
+        autoLaunchCheck.checked = config.autoLaunch !== false;
+        minimizeToTrayCheck.checked = config.minimizeToTray !== false;
+        portDisplay.textContent = config.port || 3003;
+
+        // Cargar impresoras
+        const printers = await window.electronAPI.getPrinters();
+        printerSelect.innerHTML = '';
+
+        if (printers.length === 0) {
+          printerSelect.innerHTML = '<option value="">No se encontraron impresoras</option>';
+        } else {
+          printers.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.name;
+            option.textContent = p.name + (p.isDefault ? ' (default)' : '');
+            if (p.name === config.printer) {
+              option.selected = true;
+            }
+            printerSelect.appendChild(option);
+          });
+
+          // Si no hay impresora seleccionada, usar la default
+          if (!config.printer) {
+            const defaultPrinter = printers.find(p => p.isDefault);
+            if (defaultPrinter) {
+              printerSelect.value = defaultPrinter.name;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error cargando configuración:', error);
+        statusDiv.classList.add('error');
+        statusDiv.innerHTML = '<div class="status-dot"></div><span>Error de conexión</span>';
+      }
+    }
+
+    // Guardar configuración
+    saveBtn.addEventListener('click', async () => {
+      const config = {
+        printer: printerSelect.value,
+        port: parseInt(portInput.value) || 3003,
+        autoLaunch: autoLaunchCheck.checked,
+        minimizeToTray: minimizeToTrayCheck.checked
+      };
+
+      try {
+        await window.electronAPI.saveConfig(config);
+        portDisplay.textContent = config.port;
+
+        // Mostrar confirmación
+        saveBtn.textContent = '✅ Guardado!';
+        setTimeout(() => {
+          saveBtn.textContent = '💾 Guardar';
+        }, 2000);
+
+        // Reiniciar servidor si el puerto cambió
+        await window.electronAPI.restartServer();
+      } catch (error) {
+        alert('Error guardando configuración: ' + error.message);
+      }
+    });
+
+    // Probar impresión
+    testBtn.addEventListener('click', async () => {
+      const printer = printerSelect.value;
+      if (!printer) {
+        alert('Selecciona una impresora primero');
+        return;
+      }
+
+      testBtn.textContent = '⏳ Imprimiendo...';
+      testBtn.disabled = true;
+
+      try {
+        await window.electronAPI.testPrint(printer);
+        testBtn.textContent = '✅ Enviado!';
+      } catch (error) {
+        testBtn.textContent = '❌ Error';
+        alert('Error de impresión: ' + error.message);
+      }
+
+      setTimeout(() => {
+        testBtn.textContent = '🧪 Probar';
+        testBtn.disabled = false;
+      }, 2000);
+    });
+
+    // Cargar al iniciar
+    loadConfig();
+  </script>
+</body>
+</html>

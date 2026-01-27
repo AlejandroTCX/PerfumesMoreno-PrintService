@@ -1,0 +1,5 @@
+{
+  "printer": "ImpresoraTicket",
+  "port": 3003,
+  "lineWidth": 32
+}
