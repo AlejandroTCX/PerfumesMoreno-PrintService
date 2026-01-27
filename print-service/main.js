@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, dialog, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, dialog, shell, ipcMain, powerMonitor } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 const { startServer, stopServer } = require('./server');
@@ -170,15 +170,49 @@ function setupAutoLaunch() {
   }
 }
 
+// Power monitor - restart server on wake from sleep
+function setupPowerMonitor() {
+  powerMonitor.on('resume', async () => {
+    console.log('💤 Sistema despertó del modo suspensión');
+    // Wait a moment for network to be ready
+    setTimeout(async () => {
+      console.log('🔄 Reiniciando servidor de impresión...');
+      await restartServer();
+      console.log('✅ Servidor de impresión reiniciado después de wakeup');
+    }, 3000); // Wait 3 seconds for network/system to stabilize
+  });
+
+  powerMonitor.on('suspend', () => {
+    console.log('😴 Sistema entrando en modo suspensión');
+  });
+
+  powerMonitor.on('lock-screen', () => {
+    console.log('🔒 Pantalla bloqueada');
+  });
+
+  powerMonitor.on('unlock-screen', async () => {
+    console.log('🔓 Pantalla desbloqueada');
+    // Also restart on unlock to ensure service is running
+    setTimeout(async () => {
+      await restartServer();
+      console.log('✅ Servidor verificado después de desbloqueo');
+    }, 2000);
+  });
+}
+
 app.whenReady().then(async () => {
   createWindow();
   createTray();
   setupAutoLaunch();
+  setupPowerMonitor(); // Listen for sleep/wake events
 
   // Iniciar servidor HTTP
   server = await startServer(store.get('port'), store.get('printer'), mainWindow);
 
   console.log('✅ PerfumesMoreno Print Service iniciado');
+  console.log('💡 El servicio se reiniciará automáticamente después de:');
+  console.log('   - Suspensión/hibernación');
+  console.log('   - Desbloqueo de pantalla');
 
   // Si se inició con --hidden, no mostrar ventana
   if (!process.argv.includes('--hidden')) {
