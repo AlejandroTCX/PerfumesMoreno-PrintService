@@ -1,6 +1,6 @@
 {
   "name": "perfumes-moreno-print-service",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Servicio de impresión silenciosa para PerfumesMoreno POS",
   "main": "main.js",
   "author": "PerfumesMoreno",
@@ -47,7 +47,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "PM Print Service"
+      "shortcutName": "PM Print Service",
+      "runAfterFinish": false
     }
   }
 }
