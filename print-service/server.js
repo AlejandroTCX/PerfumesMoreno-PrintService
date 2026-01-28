@@ -192,7 +192,7 @@ ${htmlContent}
           },
           pageSize: {
             width: 80000, // microns (80mm)
-            height: 297000 // auto height
+            height: 3000000 // 3000mm - large enough for continuous roll paper
           }
         };
 
