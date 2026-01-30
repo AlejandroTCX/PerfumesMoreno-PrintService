@@ -198,7 +198,7 @@ async function printHTML(htmlContent, printerName, copies = 1, silent = true) {
     @page{size:80mm auto;margin:0}
     @media print{html,body{width:80mm;margin:0;padding:0}}
     body{font-family:'Courier New',monospace;font-size:12px;width:80mm;padding:1mm 0 0 0;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    body>*{width:100%;max-width:72mm;text-align:center;margin-left:0!important;margin-right:0!important}
+    body>*{width:100%;max-width:78mm;text-align:center;margin-left:0!important;margin-right:0!important}
     table{width:100%;text-align:left}
   </style>
 </head>
