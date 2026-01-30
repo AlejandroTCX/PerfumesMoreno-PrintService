@@ -5,14 +5,55 @@ const { BrowserWindow } = require('electron');
 let serverInstance = null;
 let mainWindowRef = null;
 
+// Persistent hidden window for fast printing
+let printWindow = null;
+let printBusy = false;
+const printQueue = [];
+
+/**
+ * Creates or returns the persistent hidden print window
+ */
+function getPrintWindow() {
+  if (printWindow && !printWindow.isDestroyed()) {
+    return printWindow;
+  }
+  printWindow = new BrowserWindow({
+    width: 302,
+    height: 402,
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      offscreen: true
+    }
+  });
+  printWindow.on('closed', () => { printWindow = null; });
+  return printWindow;
+}
+
 /**
  * Inicia el servidor HTTP para recibir solicitudes de impresión
  */
 async function startServer(port, defaultPrinter, mainWindow) {
   mainWindowRef = mainWindow;
 
+  // Pre-create the print window so first print is fast
+  getPrintWindow();
+
   const app = express();
-  app.use(cors());
+  app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    credentials: false
+  }));
+  // Explicit preflight for all routes
+  app.options('*', (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept');
+    res.sendStatus(204);
+  });
   app.use(express.json({ limit: '10mb' }));
 
   // Health check
@@ -20,7 +61,7 @@ async function startServer(port, defaultPrinter, mainWindow) {
     res.json({
       status: 'ok',
       service: 'PerfumesMoreno Print Service',
-      version: '1.0.0',
+      version: '1.0.4',
       port: port,
       printer: defaultPrinter
     });
@@ -54,7 +95,7 @@ async function startServer(port, defaultPrinter, mainWindow) {
     const targetPrinter = printer || defaultPrinter;
 
     try {
-      await printHTML(content, targetPrinter, copies, silent);
+      await enqueuePrint(content, targetPrinter, copies, silent);
       console.log(`✅ Impresión enviada a: ${targetPrinter}`);
       res.json({ success: true, message: 'Impresión enviada', printer: targetPrinter });
     } catch (error) {
@@ -75,7 +116,7 @@ async function startServer(port, defaultPrinter, mainWindow) {
     const htmlContent = `<pre style="font-family: monospace; font-size: 12px; margin: 0;">${content}</pre>`;
 
     try {
-      await printHTML(htmlContent, targetPrinter, copies, true);
+      await enqueuePrint(htmlContent, targetPrinter, copies, true);
       res.json({ success: true, message: 'Impresión enviada', printer: targetPrinter });
     } catch (error) {
       res.status(500).json({ error: 'Error al imprimir', details: error.message });
@@ -100,6 +141,10 @@ async function startServer(port, defaultPrinter, mainWindow) {
  */
 async function stopServer(server) {
   return new Promise((resolve) => {
+    if (printWindow && !printWindow.isDestroyed()) {
+      printWindow.close();
+      printWindow = null;
+    }
     if (server) {
       server.close(() => {
         console.log('🛑 Print Server detenido');
@@ -112,105 +157,77 @@ async function stopServer(server) {
 }
 
 /**
- * Imprime HTML usando una ventana oculta de Electron
+ * Queues a print job. Only one print runs at a time to avoid conflicts
+ * on the shared window.
+ */
+function enqueuePrint(htmlContent, printerName, copies, silent) {
+  return new Promise((resolve, reject) => {
+    printQueue.push({ htmlContent, printerName, copies, silent, resolve, reject });
+    if (!printBusy) processQueue();
+  });
+}
+
+async function processQueue() {
+  if (printBusy || printQueue.length === 0) return;
+  printBusy = true;
+
+  const job = printQueue.shift();
+  try {
+    await printHTML(job.htmlContent, job.printerName, job.copies, job.silent);
+    job.resolve();
+  } catch (err) {
+    job.reject(err);
+  } finally {
+    printBusy = false;
+    if (printQueue.length > 0) processQueue();
+  }
+}
+
+/**
+ * Imprime HTML reutilizando la ventana oculta persistente
  */
 async function printHTML(htmlContent, printerName, copies = 1, silent = true) {
-  return new Promise((resolve, reject) => {
-    // Crear ventana oculta para imprimir
-    const printWindow = new BrowserWindow({
-      width: 300,
-      height: 400,
-      show: false,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true
-      }
-    });
+  const win = getPrintWindow();
 
-    // HTML completo con estilos para impresora térmica
-    const fullHTML = `
-<!DOCTYPE html>
+  const fullHTML = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    @page {
-      size: 80mm auto;
-      margin: 0;
-    }
-    @media print {
-      html, body {
-        width: 80mm;
-        margin: 0;
-        padding: 0;
-      }
-    }
-    body {
-      font-family: 'Courier New', monospace;
-      font-size: 12px;
-      width: 80mm;
-      padding: 2mm;
-      display: flex;
-      justify-content: center;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    body > * {
-      width: 100%;
-      max-width: 76mm;
-      margin: 0 auto;
-      text-align: center;
-    }
-    table {
-      width: 100%;
-      text-align: left;
-    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    @page{size:80mm auto;margin:0}
+    @media print{html,body{width:80mm;margin:0;padding:0}}
+    body{font-family:'Courier New',monospace;font-size:12px;width:80mm;padding:0;margin:0;display:flex;justify-content:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body>*{width:100%;max-width:72mm;margin:0 auto;text-align:center}
+    table{width:100%;text-align:left}
   </style>
 </head>
-<body>
-${htmlContent}
-</body>
+<body>${htmlContent}</body>
 </html>`;
 
-    printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(fullHTML)}`);
+  // Load new content into the existing window
+  await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(fullHTML)}`);
 
-    printWindow.webContents.on('did-finish-load', () => {
-      // Pequeño delay para asegurar que el contenido se renderizó
-      setTimeout(() => {
-        const printOptions = {
-          silent: silent,
-          printBackground: true,
-          deviceName: printerName,
-          copies: copies,
-          margins: {
-            marginType: 'none'
-          },
-          pageSize: {
-            width: 80000, // microns (80mm)
-            height: 3000000 // 3000mm - large enough for continuous roll paper
-          }
-        };
+  // Print immediately — no setTimeout needed, loadURL already awaits render
+  return new Promise((resolve, reject) => {
+    const printOptions = {
+      silent: silent,
+      printBackground: true,
+      deviceName: printerName,
+      copies: copies,
+      margins: { marginType: 'none' },
+      pageSize: {
+        width: 80000,
+        height: 3000000
+      }
+    };
 
-        printWindow.webContents.print(printOptions, (success, failureReason) => {
-          printWindow.close();
-
-          if (success) {
-            resolve();
-          } else {
-            reject(new Error(failureReason || 'Error de impresión desconocido'));
-          }
-        });
-      }, 100);
-    });
-
-    printWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-      printWindow.close();
-      reject(new Error(`Error cargando contenido: ${errorDescription}`));
+    win.webContents.print(printOptions, (success, failureReason) => {
+      if (success) {
+        resolve();
+      } else {
+        reject(new Error(failureReason || 'Error de impresión desconocido'));
+      }
     });
   });
 }

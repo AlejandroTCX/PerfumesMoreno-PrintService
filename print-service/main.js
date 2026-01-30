@@ -317,7 +317,7 @@ ipcMain.handle('test-print', async (event, printerName) => {
       <meta charset="UTF-8">
       <style>
         @page { size: 80mm auto; margin: 0; }
-        body { margin: 0; padding: 5mm; width: 80mm; }
+        body { margin: 0; padding: 0; width: 80mm; }
       </style>
     </head>
     <body>${testHTML}</body>
