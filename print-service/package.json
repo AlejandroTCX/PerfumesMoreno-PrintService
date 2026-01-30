@@ -1,6 +1,6 @@
 {
   "name": "perfumes-moreno-print-service",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "Servicio de impresión silenciosa para PerfumesMoreno POS",
   "main": "main.js",
   "author": "PerfumesMoreno",
