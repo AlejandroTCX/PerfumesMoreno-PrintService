@@ -208,7 +208,15 @@ async function printHTML(htmlContent, printerName, copies = 1, silent = true) {
   // Load new content into the existing window
   await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(fullHTML)}`);
 
-  // Print immediately — no setTimeout needed, loadURL already awaits render
+  // Measure actual content height so PDF printers get a fitted page
+  const contentHeightPx = await win.webContents.executeJavaScript(
+    'document.body.scrollHeight'
+  );
+  // Convert px to microns (1px ≈ 264.58 microns at 96dpi) + 5mm buffer
+  const contentHeightMicrons = Math.ceil(contentHeightPx * 264.58) + 5000;
+  // Use measured height but cap minimum at 50mm and no max limit for long tickets
+  const pageHeightMicrons = Math.max(50000, contentHeightMicrons);
+
   return new Promise((resolve, reject) => {
     const printOptions = {
       silent: silent,
@@ -218,7 +226,7 @@ async function printHTML(htmlContent, printerName, copies = 1, silent = true) {
       margins: { marginType: 'none' },
       pageSize: {
         width: 80000,
-        height: 3000000
+        height: pageHeightMicrons
       }
     };
 
